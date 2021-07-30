@@ -1,96 +1,65 @@
-" Set compatibility to Vim only.
-set nolist
-set rnu
-" Helps force plug-ins to load correctly when it is turned back on below.
-filetype off
+" Fisa-vim-config, a config for both Vim and NeoVim
+" http://vim.fisadev.com
+" version: 12.0.1
 
-" Turn on syntax highlighting.
-syntax on
+" To use fancy symbols wherever possible, change this setting from 0 to 1
+" and use a font from https://github.com/ryanoasis/nerd-fonts in your terminal 
+" (if you aren't using one of those fonts, you will see funny characters here. 
+" Turst me, they look nice when using one of those fonts).
+let fancy_symbols_enabled = 1
 
-" For plug-ins to load correctly.
-filetype plugin indent on
 
-" Turn off modelines
-set modelines=0
-
-" Automatically wrap text that extends beyond the screen length.
-set wrap
-" Vim's auto indentation feature does not work properly with text copied from outside of Vim. Press the <F2> key to toggle paste mode on/off.
-nnoremap <F2> :set invpaste paste?<CR>
-imap <F2> <C-O>:set invpaste paste?<CR>
-set pastetoggle=<F2>
-
-" Uncomment below to set the max textwidth. Use a value corresponding to the width of your screen.
-set textwidth=79
-set formatoptions=tcqrn1
-set tabstop=2
-set softtabstop=2
-set expandtab
-set noshiftround
-
-" Display 5 lines above/below the cursor when scrolling with a mouse.
-set scrolloff=5
-" Fixes common backspace problems
-set backspace=indent,eol,start
-
-" Speed up scrolling in Vim
-set ttyfast
-
-" Status bar
-set laststatus=2
-
-" Display options
-set showmode
-set showcmd
-
-" Highlight matching pairs of brackets. Use the '%' character to jump between them.
-set matchpairs+=<:>
-
-" Show line numbers
-set number
-
-" Set status line display
-" set statusline=%F%m%r%h%w\ [FORMAT=%{&ff}]\ [TYPE=%Y]\ [POS=%l,%v][%p%%]\ [BUFFER=%n]\ %{strftime('%c')}
-
-" Encoding
 set encoding=utf-8
+let using_neovim = has('nvim')
+let using_vim = !using_neovim
 
-" Highlight matching search patterns
-set hlsearch
-" Enable incremental search
-set incsearch
-" Include matching uppercase words with lowercase search term
-set ignorecase
-" Include only uppercase words with uppercase search term
-set smartcase
+" ============================================================================
+" Vim-plug initialization
+" Avoid modifying this section, unless you are very sure of what you are doing
 
-" Store info from no more than 100 files at a time, 9999 lines of text, 100kb of data. Useful for copying large amounts of data between files.
-set viminfo='100,<9999,s100
-
-" Map the <Space> key to toggle a selected fold opened/closed.
-nnoremap <silent> <Space> @=(foldlevel('.')?'za':"\<Space>")<CR>
-vnoremap <Space> zf
-
-" Automatically save and load folds
-autocmd BufWinLeave *.* mkview
-autocmd BufWinEnter *.* silent loadview"
-let mapleader = ","
-noremap <leader>w :w<cr>
-noremap <leader>gs :CocSearch
-noremap <leader>fs :Files<cr>
-noremap <leader><cr> <cr><c-w>h:q<cr>
-if empty(glob('~/.vim/autoload/plug.vim'))
-  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
-    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+let vim_plug_just_installed = 0
+if using_neovim
+    let vim_plug_path = expand('~/.config/nvim/autoload/plug.vim')
+else
+    let vim_plug_path = expand('~/.vim/autoload/plug.vim')
 endif
-call plug#begin('~/.vim/plugged')
-Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-Plug 'junegunn/fzf.vim'
-Plug 'pangloss/vim-javascript'    " JavaScript support
-Plug 'leafgarland/typescript-vim' " TypeScript syntax
-Plug 'neoclide/coc.nvim' , { 'branch' : 'release' }
-Plug 'vim-airline/vim-airline'
+if !filereadable(vim_plug_path)
+    echo "Installing Vim-plug..."
+    echo ""
+    if using_neovim
+        silent !mkdir -p ~/.config/nvim/autoload
+       silent !curl -fLo ~/.config/nvim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    else
+        silent !mkdir -p ~/.vim/autoload
+        silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    endif
+    let vim_plug_just_installed = 1
+endif
+
+" manually load vim-plug the first time
+if vim_plug_just_installed
+    :execute 'source '.fnameescape(vim_plug_path)
+endif
+
+" Obscure hacks done, you can now modify the rest of the config down below 
+" as you wish :)
+" IMPORTANT: some things in the config are vim or neovim specific. It's easy 
+" to spot, they are inside `if using_vim` or `if using_neovim` blocks.
+
+" ============================================================================
+" Active plugins
+" You can disable or add new ones here:
+
+" this needs to be here, so vim-plug knows we are declaring the plugins we
+" want to use
+if using_neovim
+    call plug#begin("~/.config/nvim/plugged")
+else
+    call plug#begin("~/.vim/plugged")
+endif
+
+" Now the actual plugins:
+
 " Override configs by directory
 Plug 'arielrossanigo/dir-configs-override.vim'
 " Code commenter
@@ -113,7 +82,11 @@ Plug 'junegunn/fzf.vim'
 " Pending tasks list
 Plug 'fisadev/FixedTaskList.vim'
 " Async autocompletion
-Plug 'Shougo/deoplete.nvim'
+if using_neovim && vim_plug_just_installed
+    Plug 'Shougo/deoplete.nvim', {'do': ':autocmd VimEnter * UpdateRemotePlugins'}
+else
+    Plug 'Shougo/deoplete.nvim'
+endif
 Plug 'roxma/nvim-yarp'
 Plug 'roxma/vim-hug-neovim-rpc'
 " Python autocompletion
@@ -162,46 +135,95 @@ Plug 'myusuf3/numbers.vim'
 " Nice icons in the file explorer and file type status line.
 Plug 'ryanoasis/vim-devicons'
 
-" Consoles as buffers (neovim has its own consoles as buffers)
-Plug 'rosenfeld/conque-term'
-" XML/HTML tags navigation (neovim has its own)
-Plug 'vim-scripts/matchit.zip'
+if using_vim
+    " Consoles as buffers (neovim has its own consoles as buffers)
+    Plug 'rosenfeld/conque-term'
+    " XML/HTML tags navigation (neovim has its own)
+    Plug 'vim-scripts/matchit.zip'
+endif
 
-" Code searcher. If you enable it, you should also configure g:hound_base_url
+" Code searcher. If you enable it, you should also configure g:hound_base_url 
 " and g:hound_port, pointing to your hound instance
 " Plug 'mattn/webapi-vim'
 " Plug 'jfo/hound.vim'
 
 " Tell vim-plug we finished declaring plugins, so it can load them
+call plug#end()
 
 " ============================================================================
 " Install plugins the first time vim runs
 
-"if vim_plug_just_installed
-"    echo "Installing Bundles, please ignore key map error messages"
-:PlugInstall
+if vim_plug_just_installed
+    echo "Installing Bundles, please ignore key map error messages"
+    :PlugInstall
+endif
 
-call plug#end()
-let g:coc_global_extensions = [ 'coc-tsserver' ]
+" ============================================================================
+" Vim settings and mappings
+" You can edit them as you wish
+ 
+if using_vim
+    " A bunch of things that are set by default in neovim, but not in vim
 
-let g:airline_powerline_fonts = 1
-" GoTo code navigation.
-nmap <silent> gd <Plug>(coc-definition)
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
-:imap ii <Esc>
-set incsearch
-set hlsearch
-filetype plugin on
-filetype indent on
+    " no vi-compatible
+    set nocompatible
+
+    " allow plugins by file type (required for plugins!)
+    filetype plugin on
+    filetype indent on
+
+    " always show status bar
+    set ls=2
+
+    " incremental search
+    set incsearch
+    " highlighted search results
+    set hlsearch
+
+    " syntax highlight on
+    syntax on
+
+    " better backup, swap and undos storage for vim (nvim has nice ones by
+    " default)
+    set directory=~/.vim/dirs/tmp     " directory to place swap files in
+    set backup                        " make backup files
+    set backupdir=~/.vim/dirs/backups " where to put backup files
+    set undofile                      " persistent undos - undo after you re-open the file
+    set undodir=~/.vim/dirs/undos
+    set viminfo+=n~/.vim/dirs/viminfo
+    " create needed directories if they don't exist
+    if !isdirectory(&backupdir)
+        call mkdir(&backupdir, "p")
+    endif
+    if !isdirectory(&directory)
+        call mkdir(&directory, "p")
+    endif
+    if !isdirectory(&undodir)
+        call mkdir(&undodir, "p")
+    endif
+end
+
+" tabs and spaces handling
 set expandtab
 set tabstop=4
 set softtabstop=4
-set shiftwidth=4
+set shiftwidth=2
 
-" remove vertical lines on window division
-set fillchars+=vert:\
+" show line numbers
+set nu
+
+" remove ugly vertical lines on window division
+set fillchars+=vert:\ 
+
+" use 256 colors when possible
+if has('gui_running') || using_neovim || (&term =~? 'mlterm\|xterm\|xterm-256\|screen-256')
+    if !has('gui_running')
+        let &t_Co = 256
+    endif
+    colorscheme vim-monokai-tasty
+else
+    colorscheme delek
+endif
 
 " needed so deoplete can auto select the first suggestion
 set completeopt+=noinsert
@@ -214,8 +236,45 @@ set completeopt-=preview
 " (complete only the common part, list the options that match)
 set wildmode=list:longest
 
+" save as sudo
+ca w!! w !sudo tee "%"
+
+" tab navigation mappings
+map tt :tabnew 
+map <M-Right> :tabn<CR>
+imap <M-Right> <ESC>:tabn<CR>
+map <M-Left> :tabp<CR>
+imap <M-Left> <ESC>:tabp<CR>
+
+" when scrolling, keep cursor 3 lines away from screen border
+set scrolloff=3
+
+" clear search results
+nnoremap <silent> // :noh<CR>
+
 " clear empty spaces at the end of lines on save of python files
 autocmd BufWritePre *.py :%s/\s\+$//e
+
+" fix problems with uncommon shells (fish, xonsh) and plugins running commands
+" (neomake, ...)
+set shell=/bin/bash 
+
+" Ability to add python breakpoints
+" (I use ipdb, but you can change it to whatever tool you use for debugging)
+au FileType python map <silent> <leader>b Oimport ipdb; ipdb.set_trace()<esc>
+
+" ============================================================================
+" Plugins settings and mappings
+" Edit them as you wish.
+
+" Tagbar -----------------------------
+
+" toggle tagbar display
+map <F4> :TagbarToggle<CR>
+" autofocus on tagbar open
+let g:tagbar_autofocus = 1
+
+" NERDTree -----------------------------
 
 " toggle nerdtree display
 map <F3> :NERDTreeToggle<CR>
@@ -246,6 +305,16 @@ function! NERDTreeRefresh()
 endfunction
 
 autocmd BufEnter * call NERDTreeRefresh()
+
+" Tasklist ------------------------------
+
+" show pending tasks list
+map <F2> :TaskList<CR>
+
+" Neomake ------------------------------
+
+" Run linter on write
+autocmd! BufWritePost * Neomake
 
 " Check code as python3 by default
 let g:neomake_python_python_maker = neomake#makers#ft#python#python()
@@ -309,7 +378,7 @@ nmap ,D :tab split<CR>:call jedi#goto()<CR>
 " Ack.vim ------------------------------
 
 " mappings
-nmap ,r :Ack
+nmap ,r :Ack 
 nmap ,wr :execute ":Ack " . expand('<cword>')<CR>
 
 " Window Chooser ------------------------------
@@ -342,15 +411,24 @@ highlight SignifySignChange cterm=bold ctermbg=237  ctermfg=227
 "  mode)
 let g:AutoClosePumvisible = {"ENTER": "\<C-Y>", "ESC": "\<ESC>"}
 
-" Yankring
-let g:yankring_history_dir = '~/.vim/dirs'
+" Yankring -------------------------------
+
+if using_neovim
+    let g:yankring_history_dir = '~/.config/nvim/'
+    " Fix for yankring and neovim problem when system has non-text things
+    " copied in clipboard
+    let g:yankring_clipboard_monitor = 0
+else
+    let g:yankring_history_dir = '~/.vim/dirs/'
+endif
+
+" Airline ------------------------------
 
 let g:airline_powerline_fonts = 0
 let g:airline_theme = 'bubblegum'
 let g:airline#extensions#whitespace#enabled = 0
 
 " Fancy Symbols!!
-let fancy_symbols_enabled = 1
 
 if fancy_symbols_enabled
     let g:webdevicons_enable = 1
@@ -369,3 +447,16 @@ if fancy_symbols_enabled
 else
     let g:webdevicons_enable = 0
 endif
+
+" Custom configurations ----------------
+:imap ii <Esc>
+
+" Include user's custom nvim configurations
+if using_neovim
+    let custom_configs_path = "~/.config/nvim/custom.vim"
+else
+    let custom_configs_path = "~/.vim/custom.vim"
+endif
+if filereadable(expand(custom_configs_path))
+  execute "source " . custom_configs_path
+endif 
